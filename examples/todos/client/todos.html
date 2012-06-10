@@ -19,8 +19,14 @@
 <template name="lists">
   <h3>Todo Lists</h3>
   <div id="lists">
+    <div class="display">
+      <div class="list-name {{name_class}}">
+        <div id="all-list" class="list {{selected}}">All lists</div>
+      </div>
+    </div>
     {{#each lists}}
       <div class="list {{selected}}">
+        <div class="destroy"></div>
         {{#if editing}}
           <div class="edit">
             <input class="list-name-input" id="list-name-input" type="text" value="{{name}}" />
@@ -28,9 +34,10 @@
         {{else}}
           <div class="display">
             <div class="list-name {{name_class}}">
-              {{name}}
+              {{name}} <span class="count">({{count}})</span>
             </div>
           </div>
+          <div class="destroy"></div>
         {{/if}}
       </div>
     {{/each}}
@@ -41,18 +48,18 @@
 </template>
 
 <template name="todos">
-  {{#if any_list_selected}}
   <div id="items-view">
+    {{#if any_list_selected}}
     <div id="new-todo-box">
       <input type="text" id="new-todo" placeholder="New item" />
     </div>
+    {{/if}}
     <ul id="item-list">
       {{#each todos}}
         {{> todo_item}}
       {{/each}}
     </ul>
   </div>
-  {{/if}}
 </template>
 
 <template name="todo_item">
@@ -65,7 +72,7 @@
       <div class="destroy"></div>
       <div class="display">
         <input class="check" name="markdone" type="checkbox" {{{done_checkbox}}} />
-        <div class="todo-text">{{text}}</div>
+        <div class="todo-text">{{list_name}}{{text}}</div>
       </div>
     {{/if}}
     <div class="item-tags">

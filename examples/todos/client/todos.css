@@ -121,6 +121,8 @@ h3 {
 
 #lists .list {
     padding: 3px 6px;
+    display: block;
+    position: relative;
 }
 
 #lists .selected {
@@ -131,6 +133,23 @@ h3 {
 
 #lists .list-name {
     cursor: pointer;
+}
+
+#lists .list .destroy {
+    cursor: pointer;
+    position: absolute;
+    left: 175px;
+    top: 4px;
+    height: 20px;
+    width: 20px;
+}
+
+#lists .list:hover .destroy {
+    background: url('/destroy.png') no-repeat 0 0;
+}
+
+#lists .list .destroy:hover {
+    background-position: 0 -20px;
 }
 
 #createList {

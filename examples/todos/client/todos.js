@@ -22,19 +22,12 @@ Session.set('editing_itemname', null);
 
 // Subscribe to 'lists' collection on startup.
 // Select a list once data has arrived.
-Meteor.subscribe('lists', function () {
-  if (!Session.get('list_id')) {
-    var list = Lists.findOne({}, {sort: {name: 1}});
-    if (list)
-      Router.setList(list._id);
-  }
-});
+Meteor.subscribe('lists');
 
-// Always be subscribed to the todos for the selected list.
+// Always be subscribed to the todos for the selected list or no list.
 Meteor.autosubscribe(function () {
   var list_id = Session.get('list_id');
-  if (list_id)
-    Meteor.subscribe('todos', list_id);
+  Meteor.subscribe('todos', list_id);
 });
 
 
@@ -83,16 +76,26 @@ var focus_field_by_id = function (id) {
 Template.lists.lists = function () {
   return Lists.find({}, {sort: {name: 1}});
 };
+Template.lists.count = function () {
+  return Todos.find({list_id: this._id}).count();
+};
 
 Template.lists.events = {
   'mousedown .list': function (evt) { // select list
-    Router.setList(this._id);
+    if(!this._id)
+      Session.set('list_id', null);
+    
+    Router.setList(this._id);      
   },
   'dblclick .list': function (evt) { // start editing list name
     Session.set('editing_listname', this._id);
     Meteor.flush(); // force DOM redraw, so we can focus the edit field
     focus_field_by_id("list-name-input");
-  }
+  },
+  'click .destroy': function () {
+    Lists.remove(this._id);
+    Todos.remove({list_id: this._id});
+  },
 };
 
 Template.lists.events[ okcancel_events('#list-name-input') ] =
@@ -117,7 +120,10 @@ Template.lists.events[ okcancel_events('#new-list') ] =
   });
 
 Template.lists.selected = function () {
-  return Session.equals('list_id', this._id) ? 'selected' : '';
+  if(Session.get('list_id'))
+    return Session.equals('list_id', this._id) ? 'selected' : '';
+  else
+    return this._id==undefined ? 'selected' : '';
 };
 
 Template.lists.name_class = function () {
@@ -155,15 +161,18 @@ Template.todos.todos = function () {
   // Determine which todos to display in main pane,
   // selected based on list_id and tag_filter.
 
-  var list_id = Session.get('list_id');
-  if (!list_id)
-    return {};
-
-  var sel = {list_id: list_id};
+  var sel = {};
+  
+  if(Session.get('list_id'))
+    var list_id = {list_id: Session.get('list_id')};
+  
   var tag_filter = Session.get('tag_filter');
+  
   if (tag_filter)
     sel.tags = tag_filter;
 
+  if (list_id)
+    sel = list_id;
   return Todos.find(sel, {sort: {timestamp: 1}});
 };
 
@@ -188,6 +197,11 @@ Template.todo_item.editing = function () {
 
 Template.todo_item.adding_tag = function () {
   return Session.equals('editing_addtag', this._id);
+};
+
+Template.todo_item.list_name = function () {
+  console.log(this.list_id);
+  return !Session.get('list_id', this.list_id) ? Lists.findOne({_id: this.list_id}).name+' - ' : '';
 };
 
 Template.todo_item.events = {
@@ -253,24 +267,36 @@ Template.tag_filter.tags = function () {
   var tag_infos = [];
   var total_count = 0;
 
-  Todos.find({list_id: Session.get('list_id')}).forEach(function (todo) {
-    _.each(todo.tags, function (tag) {
-      var tag_info = _.find(tag_infos, function (x) { return x.tag === tag; });
-      if (! tag_info)
-        tag_infos.push({tag: tag, count: 1});
-      else
-        tag_info.count++;
+  if(Session.get('list_id'))
+    Todos.find({list_id: Session.get('list_id')}).forEach(function (todo) {
+      _.each(todo.tags, function (tag) {
+        var tag_info = _.find(tag_infos, function (x) { return x.tag === tag; });
+        if (! tag_info)
+          tag_infos.push({tag: tag, count: 1});
+        else
+          tag_info.count++;
+      });
+      total_count++;
     });
-    total_count++;
-  });
+  else
+    Todos.find().forEach(function (todo) {
+      _.each(todo.tags, function (tag) {
+        var tag_info = _.find(tag_infos, function (x) { return x.tag === tag; });
+        if (! tag_info)
+          tag_infos.push({tag: tag, count: 1});
+        else
+          tag_info.count++;
+      });
+      total_count++;
+    });
 
   tag_infos = _.sortBy(tag_infos, function (x) { return x.tag; });
   tag_infos.unshift({tag: null, count: total_count});
-
   return tag_infos;
 };
 
 Template.tag_filter.tag_text = function () {
+  //console.log(this.tag);
   return this.tag || "All items";
 };
 
@@ -284,6 +310,7 @@ Template.tag_filter.events = {
       Session.set('tag_filter', null);
     else
       Session.set('tag_filter', this.tag);
+      //console.log(this.tag);
   }
 };
 
