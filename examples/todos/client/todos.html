@@ -51,6 +51,7 @@
   <div id="items-view">
     {{#if any_list_selected}}
     <div id="new-todo-box">
+      <input type="text" id="new-duedate" class="duedate" placeholder="Due date" />
       <input type="text" id="new-todo" placeholder="New item" />
     </div>
     {{/if}}
@@ -64,16 +65,22 @@
 
 <template name="todo_item">
   <li class="todo {{done_class}}">
-    {{#if editing}}
+    {{#if editing_itemname}}
       <div class="edit">
         <input id="todo-input" type="text" value="{{text}}" />
       </div>
     {{else}}
-      <div class="destroy"></div>
-      <div class="display">
-        <input class="check" name="markdone" type="checkbox" {{{done_checkbox}}} />
-        <div class="todo-text">{{list_name}}{{text}}</div>
-      </div>
+      {{#if editing_itemduedate}}
+        <div class="edit">
+          <input id="todo-duedate" type="text" value="{{due_date}}" />
+        </div>
+      {{else}}
+        <div class="destroy"></div>
+        <div class="display">
+          <input class="check" name="markdone" type="checkbox" {{{done_checkbox}}} />
+          <div class="todo-text">{{list_name}}{{text}}</div><div class="todo-duedate">{{due_date}}</div>
+        </div>
+      {{/if}}
     {{/if}}
     <div class="item-tags">
       {{#each tag_objs}}

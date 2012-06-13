@@ -19,6 +19,9 @@ Session.set('editing_listname', null);
 // When editing todo text, ID of the todo
 Session.set('editing_itemname', null);
 
+// When editing todo duedate, ID of the todo
+Session.set('editing_itemduedate', null);
+
 
 // Subscribe to 'lists' collection on startup.
 // Select a list once data has arrived.
@@ -44,7 +47,7 @@ var okcancel_events = function (selector) {
 var make_okcancel_handler = function (options) {
   var ok = options.ok || function () {};
   var cancel = options.cancel || function () {};
-
+  //console.log(evt);
   return function (evt) {
     if (evt.type === "keydown" && evt.which === 27) {
       // escape = cancel
@@ -54,6 +57,7 @@ var make_okcancel_handler = function (options) {
                evt.type === "focusout") {
       // blur/return/enter = ok/submit if non-empty
       var value = String(evt.target.value || "");
+      
       if (value)
         ok.call(this, value, evt);
       else
@@ -140,22 +144,33 @@ Template.todos.any_list_selected = function () {
   return !Session.equals('list_id', null);
 };
 
-Template.todos.events = {};
+Template.todos.events = {
+  'mousedown .duedate': function () {
+    $("#new-duedate").datepicker(); 
+  }
+};
 
 Template.todos.events[ okcancel_events('#new-todo') ] =
   make_okcancel_handler({
     ok: function (text, evt) {
+      //console.log(Date.UTC(duedate));
+      var duedate = document.getElementById('new-duedate').value;
       var tag = Session.get('tag_filter');
       Todos.insert({
         text: text,
         list_id: Session.get('list_id'),
         done: false,
         timestamp: (new Date()).getTime(),
-        tags: tag ? [tag] : []
+        tags: tag ? [tag] : [],
+        due_date: Date.parse(duedate)
       });
       evt.target.value = '';
+      document.getElementById('new-duedate').value = '';
     }
   });
+
+  
+    
 
 Template.todos.todos = function () {
   // Determine which todos to display in main pane,
@@ -166,15 +181,17 @@ Template.todos.todos = function () {
   if(Session.get('list_id'))
     var list_id = {list_id: Session.get('list_id')};
   
+  if (list_id)
+    sel = list_id;
+
   var tag_filter = Session.get('tag_filter');
   
   if (tag_filter)
     sel.tags = tag_filter;
 
-  if (list_id)
-    sel = list_id;
-  return Todos.find(sel, {sort: {timestamp: 1}});
+  return Todos.find(sel, {sort: {due_date: 1}});
 };
+
 
 Template.todo_item.tag_objs = function () {
   var todo_id = this._id;
@@ -191,8 +208,12 @@ Template.todo_item.done_checkbox = function () {
   return this.done ? 'checked="checked"' : '';
 };
 
-Template.todo_item.editing = function () {
+Template.todo_item.editing_itemname = function () {
   return Session.equals('editing_itemname', this._id);
+};
+
+Template.todo_item.editing_itemduedate = function () {
+  return Session.equals('editing_itemduedate', this._id);
 };
 
 Template.todo_item.adding_tag = function () {
@@ -200,8 +221,13 @@ Template.todo_item.adding_tag = function () {
 };
 
 Template.todo_item.list_name = function () {
-  console.log(this.list_id);
+  //console.log(this.list_id);
   return !Session.get('list_id', this.list_id) ? Lists.findOne({_id: this.list_id}).name+' - ' : '';
+};
+
+Template.todo_item.due_date = function () {
+  //console.log(this.list_id);
+  return Todos.findOne({_id: this._id}).due_date ? moment(Todos.findOne({_id: this._id}).due_date).format("ddd D MMM YYYY") : '';
 };
 
 Template.todo_item.events = {
@@ -225,6 +251,13 @@ Template.todo_item.events = {
     focus_field_by_id("todo-input");
   },
 
+  'dblclick .display .todo-duedate': function (evt) {
+    Session.set('editing_itemduedate', this._id);
+    Meteor.flush(); // update DOM before focus
+    $("#todo-duedate").datepicker();
+    focus_field_by_id("todo-duedate");
+  },
+
   'click .remove': function (evt) {
     var tag = this.tag;
     var id = this.todo_id;
@@ -246,6 +279,17 @@ Template.todo_item.events[ okcancel_events('#todo-input') ] =
     },
     cancel: function () {
       Session.set('editing_itemname', null);
+    }
+  });
+
+  Template.todo_item.events[ okcancel_events('#todo-duedate') ] =
+  make_okcancel_handler({
+    ok: function (value) {
+      Todos.update(this._id, {$set: {due_date: value}});
+      Session.set('editing_itemduedate', null);
+    },
+    cancel: function () {
+      Session.set('editing_itemduedate', null);
     }
   });
 

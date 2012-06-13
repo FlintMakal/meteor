@@ -173,7 +173,13 @@ h3 {
 
 #new-todo {
    position: absolute;
-   width: 100%;
+   width: 85%;
+   left:11%;
+}
+
+#new-duedate {
+   position: absolute;
+   width: 10%;
 }
 
 #items-view {
@@ -265,6 +271,12 @@ h3 {
 }
 
 #item-list .todo .todo-text {
+    float: left;
+    margin-left: 10px;
+    font-size: 100%;
+}
+
+#item-list .todo .todo-duedate {
     float: left;
     margin-left: 10px;
     font-size: 100%;
